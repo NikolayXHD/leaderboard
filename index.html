@@ -3725,6 +3725,25 @@ return Plotly;
       return weights;
     }
 
+    function parseHashWeights() {
+      const weights = {};
+      const hash = window.location.hash.replace(/^#/, '');
+      if (!hash) return weights;
+      for (const [metric, raw] of new URLSearchParams(hash)) {
+        const value = Number(raw);
+        if (!Number.isNaN(value)) weights[metric] = value;
+      }
+      return weights;
+    }
+
+    function writeHashWeights(weights) {
+      const params = new URLSearchParams();
+      for (const metric of data.metrics) {
+        params.set(metric, String(weights[metric] ?? 0));
+      }
+      window.history.replaceState(null, '', '#' + params.toString());
+    }
+
     function score(row, weights) {
       let total = 0;
       for (const metric of data.metrics) total += weights[metric] || 0;
@@ -3798,7 +3817,7 @@ return Plotly;
         input.min = '0';
         input.max = '100';
         input.step = '1';
-        input.value = data.initialWeights[metric] ?? 0;
+        input.value = latestWeights[metric] ?? 0;
         input.addEventListener('input', onInput);
         const out = document.createElement('output');
         out.textContent = input.value;
@@ -3948,6 +3967,7 @@ return Plotly;
     function onInput() {
       latestWeights = readWeights();
       pendingWeights = latestWeights;
+      writeHashWeights(latestWeights);
       scheduleRestyle();
     }
 
@@ -3961,7 +3981,7 @@ return Plotly;
 
     async function main() {
       invertedSet = new Set(data.inverted);
-      latestWeights = {...data.initialWeights};
+      latestWeights = {...data.initialWeights, ...parseHashWeights()};
       traces = data.figure.data;
       layout = data.figure.layout;
       traces[data.textIndex].visible = true;
